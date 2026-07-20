@@ -48,36 +48,67 @@ def _to_questionary(choice: str | Choice | Separator) -> Any:
     return choice
 
 
-def _bind_abort_keys(question: Any, *, quit_key: bool) -> Any:
-    """Wire ESC (and optionally ``q``) to abort a select prompt.
+class _AbortPrompt(Exception):
+    """Private signal: an abort key was pressed inside a running select prompt.
 
-    questionary 2.x binds only Ctrl-C/Ctrl-Q to cancel; ESC does nothing. We
-    reach through the returned :class:`Question` to its prompt_toolkit
-    ``Application`` and add the missing bindings so a bare ESC — and, when
-    ``quit_key`` is set, a plain ``q``/``Q`` — exits the prompt the same way
-    Ctrl-C does (raising ``KeyboardInterrupt``, which questionary turns into a
-    ``None`` answer and we turn into :class:`Aborted`).
+    We exit the prompt_toolkit ``Application`` with *this* rather than
+    ``KeyboardInterrupt`` so questionary never sees a cancel it would announce
+    with its own "Cancelled by user" line. ``select`` catches it and re-raises
+    :class:`Aborted`, funnelling into the same menu failsafe as every other
+    cancel. Kept private to this module — callers only ever see ``Aborted``.
+    """
+
+
+def _bind_abort_keys(question: Any, *, quit_key: bool, search: bool) -> Any:
+    """Wire the standard "go back / quit" keys onto a select prompt.
+
+    questionary 2.x only binds Ctrl-C/Ctrl-Q to cancel. We reach through the
+    returned :class:`Question` to its prompt_toolkit ``Application`` and add the
+    keys cli_kit treats as the universal back/quit gesture:
+
+    - ``Backspace`` — the primary, instant "back one level" key, *except* in
+      search menus, where Backspace edits the type-to-filter text and must be
+      left alone.
+    - ``q`` / ``Q`` — when ``quit_key`` is set (top-level, non-search menus).
+    - ``Escape`` — always, as a bonus. Note ESC is the lead byte of every
+      arrow/function-key escape sequence, so prompt_toolkit waits out its
+      escape timeout before firing this — hence the perceptible delay ESC has
+      that Backspace/``q`` do not. Backspace and ``q`` are the smooth path;
+      ESC is kept only so muscle memory still works.
+
+    Every bound key exits the prompt with :class:`_AbortPrompt`, which
+    :func:`select` converts to :class:`Aborted`.
     """
     from prompt_toolkit.keys import Keys
 
     bindings = question.application.key_bindings
 
-    @bindings.add(Keys.Escape, eager=True)
-    def _(event: Any) -> None:
-        event.app.exit(exception=KeyboardInterrupt, style="class:aborting")
+    def _abort(event: Any) -> None:
+        event.app.exit(exception=_AbortPrompt, style="class:aborting")
 
+    # Tag so callers/tests can tell *our* abort binding apart from questionary's
+    # own bindings on the same key (e.g. its Backspace filter-edit handler).
+    _abort._cli_kit_abort = True  # type: ignore[attr-defined]
+
+    # ESC is always an abort key. Backspace aborts only when it isn't needed to
+    # edit filter text (i.e. not a search menu). q/Q only where it isn't a
+    # filter character either. eager=True so they fire before any default
+    # binding can consume the key.
+    keys: list[Any] = [Keys.Escape]
+    if not search:
+        keys.append(Keys.Backspace)
     if quit_key:
-        for key in ("q", "Q"):
-
-            @bindings.add(key, eager=True)
-            def _(event: Any) -> None:
-                event.app.exit(exception=KeyboardInterrupt, style="class:aborting")
+        keys += ["q", "Q"]
+    for key in keys:
+        bindings.add(key, eager=True)(_abort)
 
     return question
 
 
-def _build_select(*, quit_key: bool = False, **kw: Any):
-    return _bind_abort_keys(questionary.select(**kw), quit_key=quit_key)
+def _build_select(*, quit_key: bool = False, search: bool = False, **kw: Any):
+    return _bind_abort_keys(
+        questionary.select(**kw), quit_key=quit_key, search=search
+    )
 
 
 def _build_checkbox(**kw: Any):
@@ -97,8 +128,9 @@ def select(
 
     ``choices`` are plain strings (label == value) or :class:`Choice` objects
     (label ≠ value). With ``Choice`` options the return type is the chosen
-    ``value`` (any type), not the displayed title. Raises :class:`Aborted` on
-    cancel (Ctrl-C/ESC) so the menu failsafe can treat it as "go back".
+    ``value`` (any type), not the displayed title. Raises :class:`Aborted` when
+    the user backs out (Backspace / ESC / Ctrl-C, plus ``q`` when ``quit_key``
+    is set) so the menu failsafe can treat it as "go back".
 
     ``qmark`` defaults to the active theme's marker (``theme().qmark``); pass an
     explicit string to override it for one call.
@@ -106,19 +138,26 @@ def select(
     ``quit_key`` additionally binds a plain ``q``/``Q`` keypress to abort — used
     by the top-level menu so ``q`` quits the app. Leave it off for search menus
     (where ``q`` is a filter character) and for value-selection prompts.
+    Backspace and ESC abort regardless of ``quit_key``.
     """
-    answer = _build_select(
-        quit_key=quit_key,
-        message=message,
-        choices=[_to_questionary(c) for c in choices],
-        default=default,
-        style=qstyle(),
-        qmark=theme().qmark if qmark is None else qmark,
-        use_search_filter=search,
-        # questionary rejects j/k navigation while a prefix filter is active,
-        # since j/k could be part of the typed prefix. Disable it when search is on.
-        use_jk_keys=not search,
-    ).ask()
+    try:
+        answer = _build_select(
+            quit_key=quit_key,
+            search=search,
+            message=message,
+            choices=[_to_questionary(c) for c in choices],
+            default=default,
+            style=qstyle(),
+            qmark=theme().qmark if qmark is None else qmark,
+            use_search_filter=search,
+            # questionary rejects j/k navigation while a prefix filter is active,
+            # since j/k could be part of the typed prefix. Disable it when search is on.
+            use_jk_keys=not search,
+        ).ask()
+    except _AbortPrompt:
+        # An abort key exited the prompt directly (rather than questionary
+        # mapping it to a None answer). Same meaning: back out.
+        raise Aborted() from None
     if answer is None:
         raise Aborted()
     return answer
