@@ -15,7 +15,7 @@ from cli_kit.prompts.confirm import confirm
 from cli_kit.prompts.number import number
 from cli_kit.prompts.path import path
 from cli_kit.prompts.resolve import confirm_or_yes, is_interactive, resolve
-from cli_kit.prompts.select import Choice, multiselect, select
+from cli_kit.prompts.select import Choice, Separator, multiselect, select
 from cli_kit.prompts.text import text
 
 __all__ = [
@@ -25,6 +25,7 @@ __all__ = [
     "select",
     "multiselect",
     "Choice",
+    "Separator",
     "number",
     "path",
     "resolve",
