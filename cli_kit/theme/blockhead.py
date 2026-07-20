@@ -15,4 +15,5 @@ BLOCKHEAD = Theme(
     bullet="■",
     box=box.HEAVY,
     spinner="line",
+    qmark=">",
 )

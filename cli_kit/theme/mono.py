@@ -16,4 +16,5 @@ MONO = Theme(
     bullet="-",
     box=box.ASCII,
     spinner="line",
+    qmark=">",
 )

@@ -24,3 +24,8 @@ class Theme:
     # structure
     box: rich_box.Box
     spinner: str
+    # prompt marker questionary shows before a question ("? " by default). Part of
+    # the theme so the marker is one swappable convention, not hardcoded per call.
+    # Defaulted (and placed last) so existing/custom themes that omit it keep
+    # questionary's "?" without every constructor needing to pass it.
+    qmark: str = "?"

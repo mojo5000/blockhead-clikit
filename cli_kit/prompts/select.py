@@ -7,6 +7,7 @@ import questionary
 
 from cli_kit.errors import Aborted
 from cli_kit.prompts._style import qstyle
+from cli_kit.theme import theme
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,7 @@ def select(
     choices: list[str] | list[Choice] | list[str | Choice],
     default: str | None = None,
     search: bool = False,
-    qmark: str = "?",
+    qmark: str | None = None,
 ) -> Any:
     """Prompt for one choice. Returns the selected value.
 
@@ -51,13 +52,16 @@ def select(
     (label ≠ value). With ``Choice`` options the return type is the chosen
     ``value`` (any type), not the displayed title. Raises :class:`Aborted` on
     cancel (Ctrl-C/ESC) so the menu failsafe can treat it as "go back".
+
+    ``qmark`` defaults to the active theme's marker (``theme().qmark``); pass an
+    explicit string to override it for one call.
     """
     answer = _build_select(
         message=message,
         choices=[_to_questionary(c) for c in choices],
         default=default,
         style=qstyle(),
-        qmark=qmark,
+        qmark=theme().qmark if qmark is None else qmark,
         use_search_filter=search,
         # questionary rejects j/k navigation while a prefix filter is active,
         # since j/k could be part of the typed prefix. Disable it when search is on.
@@ -73,6 +77,7 @@ def multiselect(message: str, *, choices: list[str] | list[Choice]) -> list[Any]
         message=message,
         choices=[_to_questionary(c) for c in choices],
         style=qstyle(),
+        qmark=theme().qmark,
     ).ask()
     if answer is None:
         raise Aborted()

@@ -6,6 +6,7 @@ import questionary
 
 from cli_kit.errors import Aborted
 from cli_kit.prompts._style import qstyle
+from cli_kit.theme import theme
 
 
 def _build(**kw: Any):
@@ -20,4 +21,12 @@ def _ask(question: Any) -> Any:
 
 
 def text(message: str, *, default: str = "", validate=None) -> str:
-    return _ask(_build(message=message, default=default, validate=validate, style=qstyle()))
+    return _ask(
+        _build(
+            message=message,
+            default=default,
+            validate=validate,
+            style=qstyle(),
+            qmark=theme().qmark,
+        )
+    )

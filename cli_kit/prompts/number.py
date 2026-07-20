@@ -6,6 +6,7 @@ import questionary
 
 from cli_kit.errors import Aborted
 from cli_kit.prompts._style import qstyle
+from cli_kit.theme import theme
 
 
 def _build(**kw: Any):
@@ -23,6 +24,7 @@ def number(
         message=message,
         default="" if default is None else str(default),
         style=qstyle(),
+        qmark=theme().qmark,
     ).ask()
     if raw is None:
         raise Aborted()
