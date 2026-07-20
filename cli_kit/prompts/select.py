@@ -24,7 +24,25 @@ class Choice:
     value: Any
 
 
-def _to_questionary(choice: str | Choice) -> Any:
+@dataclass(frozen=True)
+class Separator:
+    """A non-selectable divider rendered between groups of choices.
+
+    ``line`` is the text shown for the divider; it defaults to questionary's
+    own separator glyph when omitted. Separators are skipped by cursor
+    navigation and never returned as an answer.
+    """
+
+    line: str | None = None
+
+
+def _to_questionary(choice: str | Choice | Separator) -> Any:
+    if isinstance(choice, Separator):
+        return (
+            questionary.Separator()
+            if choice.line is None
+            else questionary.Separator(choice.line)
+        )
     if isinstance(choice, Choice):
         return questionary.Choice(title=choice.title, value=choice.value)
     return choice
@@ -41,7 +59,7 @@ def _build_checkbox(**kw: Any):
 def select(
     message: str,
     *,
-    choices: list[str] | list[Choice] | list[str | Choice],
+    choices: list[str] | list[Choice] | list[str | Choice | Separator],
     default: str | None = None,
     search: bool = False,
     qmark: str | None = None,
@@ -72,7 +90,9 @@ def select(
     return answer
 
 
-def multiselect(message: str, *, choices: list[str] | list[Choice]) -> list[Any]:
+def multiselect(
+    message: str, *, choices: list[str] | list[Choice] | list[str | Choice | Separator]
+) -> list[Any]:
     answer = _build_checkbox(
         message=message,
         choices=[_to_questionary(c) for c in choices],

@@ -181,6 +181,56 @@ def test_select_choice_value_can_be_nonstring(monkeypatch):
     assert result == 7
 
 
+def test_select_separator_maps_to_questionary(monkeypatch):
+    # Separator(line): a non-selectable divider. Verify _build_select receives a
+    # questionary.Separator carrying the supplied line text.
+    import questionary
+
+    captured = {}
+
+    def fake_build(**kw):
+        captured.update(kw)
+        return _FakeQuestion(kw["choices"][0])
+
+    monkeypatch.setattr(prompts.select_mod, "_build_select", fake_build)
+    prompts.select(
+        "Pick",
+        choices=["a", prompts.Separator("— more —"), prompts.Choice("b", 2)],
+    )
+    forwarded = captured["choices"]
+    assert isinstance(forwarded[1], questionary.Separator)
+    assert forwarded[1].title == "— more —"
+
+
+def test_select_separator_default_line(monkeypatch):
+    # Separator() with no line falls back to questionary's default glyph.
+    import questionary
+
+    captured = {}
+
+    def fake_build(**kw):
+        captured.update(kw)
+        return _FakeQuestion(kw["choices"][0])
+
+    monkeypatch.setattr(prompts.select_mod, "_build_select", fake_build)
+    prompts.select("Pick", choices=["a", prompts.Separator()])
+    forwarded = captured["choices"]
+    assert isinstance(forwarded[1], questionary.Separator)
+
+
+def test_select_separator_builds_real_questionary():
+    # Exercise the real builder with a divider in the list so an incompatible
+    # separator mapping would raise here rather than at runtime.
+    prompts.select_mod._build_select(
+        message="Pick",
+        choices=[
+            prompts.select_mod._to_questionary("A"),
+            prompts.select_mod._to_questionary(prompts.Separator("—")),
+            prompts.select_mod._to_questionary("B"),
+        ],
+    )
+
+
 def test_select_with_search_builds_real_questionary():
     # Regression: the interactive menu crashed because search=True was passed
     # to questionary without disabling j/k nav. Exercise the real builder (no
