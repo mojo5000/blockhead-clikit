@@ -271,6 +271,15 @@ def _binding_keys(question):
     return [b.keys for b in question.application.key_bindings.bindings]
 
 
+def _abort_bound_keys(question):
+    """Keys wired to *our* abort handler (ignoring questionary's own bindings)."""
+    return [
+        b.keys
+        for b in question.application.key_bindings.bindings
+        if getattr(b.handler, "_cli_kit_abort", False)
+    ]
+
+
 def test_build_select_always_binds_escape_to_abort():
     # ESC must cancel the prompt (→ None → Aborted) at every menu level, since
     # questionary 2.x leaves ESC unbound by default.
@@ -290,3 +299,47 @@ def test_build_select_binds_q_only_with_quit_key():
     q_off = prompts.select_mod._build_select(message="Pick", choices=["A", "B"])
     keys_off = _binding_keys(q_off)
     assert ("q",) not in keys_off and ("Q",) not in keys_off
+
+
+def test_build_select_binds_backspace_as_back_in_normal_menu():
+    # Backspace is the primary instant "back" key in non-search menus.
+    from prompt_toolkit.keys import Keys
+
+    q = prompts.select_mod._build_select(message="Pick", choices=["A", "B"])
+    assert any(Keys.Backspace in keys for keys in _abort_bound_keys(q))
+
+
+def test_build_select_leaves_backspace_free_in_search_menu():
+    # In a search menu Backspace edits the filter text, so our abort handler
+    # must NOT claim it (questionary keeps its own Backspace binding there).
+    from prompt_toolkit.keys import Keys
+
+    q = prompts.select_mod._build_select(
+        message="Pick",
+        choices=["A", "B"],
+        search=True,
+        use_search_filter=True,
+        use_jk_keys=False,
+    )
+    abort_keys = _abort_bound_keys(q)
+    assert not any(Keys.Backspace in k for k in abort_keys)
+    # ESC still aborts even in a search menu.
+    assert any(Keys.Escape in k for k in abort_keys)
+
+
+def test_abort_prompt_is_not_keyboard_interrupt():
+    # The private abort signal must not be a KeyboardInterrupt subclass, or
+    # questionary would print its own "Cancelled by user" line.
+    assert not issubclass(prompts.select_mod._AbortPrompt, KeyboardInterrupt)
+
+
+def test_abort_prompt_converts_to_aborted(monkeypatch):
+    # If the prompt exits by raising _AbortPrompt (rather than returning None),
+    # select() still surfaces the public Aborted.
+    class _Boom:
+        def ask(self):
+            raise prompts.select_mod._AbortPrompt
+
+    monkeypatch.setattr(prompts.select_mod, "_build_select", lambda **kw: _Boom())
+    with pytest.raises(Aborted):
+        prompts.select("Pick", choices=["A", "B"])
