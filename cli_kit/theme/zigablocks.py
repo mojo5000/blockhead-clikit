@@ -15,4 +15,5 @@ ZIGABLOCKS = Theme(
     bullet="•",
     box=box.ROUNDED,
     spinner="dots",
+    qmark=">",
 )

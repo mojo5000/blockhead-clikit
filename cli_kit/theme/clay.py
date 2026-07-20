@@ -19,4 +19,5 @@ CLAY = Theme(
     bullet="•",
     box=box.ROUNDED,
     spinner="dots",
+    qmark=">",
 )

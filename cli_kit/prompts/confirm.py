@@ -6,6 +6,7 @@ import questionary
 
 from cli_kit.errors import Aborted
 from cli_kit.prompts._style import qstyle
+from cli_kit.theme import theme
 
 
 def _build(**kw: Any):
@@ -13,7 +14,7 @@ def _build(**kw: Any):
 
 
 def confirm(message: str, *, default: bool = False) -> bool:
-    answer = _build(message=message, default=default, style=qstyle()).ask()
+    answer = _build(message=message, default=default, style=qstyle(), qmark=theme().qmark).ask()
     if answer is None:
         raise Aborted()
     return answer

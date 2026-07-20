@@ -7,6 +7,7 @@ import questionary
 
 from cli_kit.errors import Aborted
 from cli_kit.prompts._style import qstyle
+from cli_kit.theme import theme
 
 
 def _build(**kw: Any):
@@ -14,7 +15,7 @@ def _build(**kw: Any):
 
 
 def path(message: str, *, default: str = "", must_exist: bool = False) -> str:
-    answer = _build(message=message, default=default, style=qstyle()).ask()
+    answer = _build(message=message, default=default, style=qstyle(), qmark=theme().qmark).ask()
     if answer is None:
         raise Aborted()
     if must_exist and not Path(answer).exists():

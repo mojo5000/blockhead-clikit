@@ -24,6 +24,32 @@ def test_abort_raises_aborted(monkeypatch):
         prompts.text("App name")
 
 
+def test_text_and_confirm_use_themed_qmark(monkeypatch):
+    # text/confirm don't expose qmark, but must still carry the active theme's
+    # marker down to questionary (so the marker is consistent across prompt kinds).
+    from cli_kit.theme import theme
+
+    captured = {}
+
+    def fake_build(**kw):
+        captured.update(kw)
+        return _FakeQuestion("x")
+
+    monkeypatch.setattr(prompts.text_mod, "_build", fake_build)
+    prompts.text("Name")
+    assert captured["qmark"] == theme().qmark
+
+    captured.clear()
+
+    def fake_confirm(**kw):
+        captured.update(kw)
+        return _FakeQuestion(True)
+
+    monkeypatch.setattr(prompts.confirm_mod, "_build", fake_confirm)
+    prompts.confirm("Sure?")
+    assert captured["qmark"] == theme().qmark
+
+
 def test_number_rejects_out_of_range(monkeypatch):
     monkeypatch.setattr(prompts.number_mod, "_build", lambda **kw: _FakeQuestion("70000"))
     with pytest.raises(ValueError):
@@ -47,7 +73,11 @@ def test_select_forwards_default(monkeypatch):
     assert captured["default"] == "B"
 
 
-def test_select_qmark_forwarded_and_defaults(monkeypatch):
+def test_select_qmark_defaults_to_active_theme(monkeypatch):
+    """With no explicit qmark, select uses the active theme's marker; an explicit
+    qmark still overrides it per call."""
+    from cli_kit.theme import theme
+
     captured = {}
 
     def fake_build(**kw):
@@ -56,9 +86,9 @@ def test_select_qmark_forwarded_and_defaults(monkeypatch):
 
     monkeypatch.setattr(prompts.select_mod, "_build_select", fake_build)
     prompts.select("Pick", choices=["A", "B"])
-    assert captured["qmark"] == "?"  # default marker
-    prompts.select("Pick", choices=["A", "B"], qmark=">")
-    assert captured["qmark"] == ">"
+    assert captured["qmark"] == theme().qmark  # theme-driven default
+    prompts.select("Pick", choices=["A", "B"], qmark="?")
+    assert captured["qmark"] == "?"  # explicit override wins
 
 
 def test_select_search_flag_maps_to_questionary(monkeypatch):
