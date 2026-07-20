@@ -64,18 +64,25 @@ class Menu:
         # The prompt message *is* the breadcrumb trail (app › group › …), so the
         # name appears once — not duplicated by a separate breadcrumb line above
         # questionary's own prompt. `>` replaces the default `?` marker.
+        #
+        # ESC aborts any level (→ Aborted → up a level, or quit at the top). At
+        # the top level a plain `q` also quits, matching the visible "Quit"
+        # item — but only when this menu isn't a type-to-filter menu, where `q`
+        # is a search character.
+        at_top = menu is self
         labels = [i.label for i in menu._items]
         labels += [f"▸ {name}" for name in menu._submenus]
-        labels.append("← Back" if menu is not self else "Quit")
+        labels.append("Quit" if at_top else "← Back")
         choice = prompts.select(
             " › ".join(path),
             choices=labels,
             default=menu._last_choice,
             search=menu._search,
             qmark=">",
+            quit_key=at_top and not menu._search,
         )
         if choice in ("← Back", "Quit"):
-            return QUIT if menu is self else BACK
+            return QUIT if at_top else BACK
         return choice
 
     def run(
@@ -99,7 +106,9 @@ class Menu:
             try:
                 choice = choose(menu, path)
             except Aborted:
-                return  # Ctrl-C at a menu prompt = leave this level
+                # ESC / Ctrl-C at a menu prompt = leave this level: pop up to
+                # the parent menu, or quit when we're already at the top.
+                return
             if choice == QUIT:
                 return
             if choice == BACK:

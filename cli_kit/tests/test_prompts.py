@@ -241,3 +241,52 @@ def test_select_with_search_builds_real_questionary():
         use_search_filter=True,
         use_jk_keys=False,
     )
+
+
+def test_select_forwards_quit_key(monkeypatch):
+    captured = {}
+
+    def fake_build(**kw):
+        captured.update(kw)
+        return _FakeQuestion("A")
+
+    monkeypatch.setattr(prompts.select_mod, "_build_select", fake_build)
+    prompts.select("Pick", choices=["A", "B"], quit_key=True)
+    assert captured["quit_key"] is True
+
+
+def test_select_quit_key_defaults_off(monkeypatch):
+    captured = {}
+
+    def fake_build(**kw):
+        captured.update(kw)
+        return _FakeQuestion("A")
+
+    monkeypatch.setattr(prompts.select_mod, "_build_select", fake_build)
+    prompts.select("Pick", choices=["A", "B"])
+    assert captured["quit_key"] is False
+
+
+def _binding_keys(question):
+    return [b.keys for b in question.application.key_bindings.bindings]
+
+
+def test_build_select_always_binds_escape_to_abort():
+    # ESC must cancel the prompt (→ None → Aborted) at every menu level, since
+    # questionary 2.x leaves ESC unbound by default.
+    from prompt_toolkit.keys import Keys
+
+    q = prompts.select_mod._build_select(message="Pick", choices=["A", "B"])
+    assert any(Keys.Escape in keys for keys in _binding_keys(q))
+
+
+def test_build_select_binds_q_only_with_quit_key():
+    q_on = prompts.select_mod._build_select(
+        message="Pick", choices=["A", "B"], quit_key=True
+    )
+    keys_on = _binding_keys(q_on)
+    assert ("q",) in keys_on and ("Q",) in keys_on
+
+    q_off = prompts.select_mod._build_select(message="Pick", choices=["A", "B"])
+    keys_off = _binding_keys(q_off)
+    assert ("q",) not in keys_off and ("Q",) not in keys_off

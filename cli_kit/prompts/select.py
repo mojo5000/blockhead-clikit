@@ -48,8 +48,36 @@ def _to_questionary(choice: str | Choice | Separator) -> Any:
     return choice
 
 
-def _build_select(**kw: Any):
-    return questionary.select(**kw)
+def _bind_abort_keys(question: Any, *, quit_key: bool) -> Any:
+    """Wire ESC (and optionally ``q``) to abort a select prompt.
+
+    questionary 2.x binds only Ctrl-C/Ctrl-Q to cancel; ESC does nothing. We
+    reach through the returned :class:`Question` to its prompt_toolkit
+    ``Application`` and add the missing bindings so a bare ESC — and, when
+    ``quit_key`` is set, a plain ``q``/``Q`` — exits the prompt the same way
+    Ctrl-C does (raising ``KeyboardInterrupt``, which questionary turns into a
+    ``None`` answer and we turn into :class:`Aborted`).
+    """
+    from prompt_toolkit.keys import Keys
+
+    bindings = question.application.key_bindings
+
+    @bindings.add(Keys.Escape, eager=True)
+    def _(event: Any) -> None:
+        event.app.exit(exception=KeyboardInterrupt, style="class:aborting")
+
+    if quit_key:
+        for key in ("q", "Q"):
+
+            @bindings.add(key, eager=True)
+            def _(event: Any) -> None:
+                event.app.exit(exception=KeyboardInterrupt, style="class:aborting")
+
+    return question
+
+
+def _build_select(*, quit_key: bool = False, **kw: Any):
+    return _bind_abort_keys(questionary.select(**kw), quit_key=quit_key)
 
 
 def _build_checkbox(**kw: Any):
@@ -63,6 +91,7 @@ def select(
     default: str | None = None,
     search: bool = False,
     qmark: str | None = None,
+    quit_key: bool = False,
 ) -> Any:
     """Prompt for one choice. Returns the selected value.
 
@@ -73,8 +102,13 @@ def select(
 
     ``qmark`` defaults to the active theme's marker (``theme().qmark``); pass an
     explicit string to override it for one call.
+
+    ``quit_key`` additionally binds a plain ``q``/``Q`` keypress to abort — used
+    by the top-level menu so ``q`` quits the app. Leave it off for search menus
+    (where ``q`` is a filter character) and for value-selection prompts.
     """
     answer = _build_select(
+        quit_key=quit_key,
         message=message,
         choices=[_to_questionary(c) for c in choices],
         default=default,
