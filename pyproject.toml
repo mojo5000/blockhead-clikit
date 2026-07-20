@@ -1,6 +1,6 @@
 [project]
 name = "blockhead-clikit"
-version = "0.1.0"
+version = "0.1.1"
 description = "A reusable click + rich + questionary CLI framework. Import as `cli_kit`."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,6 +27,8 @@ packages = ["cli_kit"]
 [tool.hatch.build.targets.wheel.force-include]
 # ship the package README so `cp -r`/inspection parity is preserved
 "cli_kit/README.md" = "cli_kit/README.md"
+# PEP 561 marker so downstream type checkers trust our inline annotations
+"cli_kit/py.typed" = "cli_kit/py.typed"
 
 [dependency-groups]
 dev = [
