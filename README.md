@@ -1,5 +1,10 @@
 # blockhead-clikit
 
+[![CI](https://github.com/mojo5000/blockhead-clikit/actions/workflows/ci.yml/badge.svg)](https://github.com/mojo5000/blockhead-clikit/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/blockhead-clikit.svg)](https://pypi.org/project/blockhead-clikit/)
+[![Python versions](https://img.shields.io/pypi/pyversions/blockhead-clikit.svg)](https://pypi.org/project/blockhead-clikit/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A small, reusable **click + rich + questionary** framework for building smooth
 Python CLIs — themed prompts, a persistent menu tree, subprocess helpers, and a
 Django management-command bridge.
@@ -11,23 +16,37 @@ changes).
 ## Requirements
 
 - **Python 3.12+** — the package declares `requires-python = ">=3.12"`.
-- **[uv](https://docs.astral.sh/uv/)** — used for installing, locking, and
-  running. Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh`
-  (or `brew install uv`). Not strictly required — any pip-based workflow that
-  can install a git dependency works too — but every command in this README
-  assumes `uv`.
-- **git access to this repo** — it's a private git dependency (see below), so
-  you need to be able to `git clone` it (SSH keys or a token already set up).
+- **[uv](https://docs.astral.sh/uv/)** (recommended) — used for installing,
+  locking, and running. Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  (or `brew install uv`). Plain `pip` works too; the README just leads with `uv`.
 
 Runtime dependencies (`click`, `rich`, `questionary`) are pulled in
 automatically. The optional Django bridge needs Django, installed via the
-`django` extra — see the end of Install.
+`django` extra — see [Install](#install).
 
 ## Install
 
-This is a private git dependency — depend on it by URL (no package index needed).
-`uv` uses your existing git credentials, so a private repo works exactly like a
-public one as long as you can `git clone` it.
+```bash
+uv add blockhead-clikit
+# or
+pip install blockhead-clikit
+```
+
+Consumers needing the Django bridge (`cli_kit.django_cmd`) add the `django`
+extra (Django is imported lazily, so only these consumers pull it in):
+
+```bash
+uv add "blockhead-clikit[django]"
+```
+
+### Installing from git (unreleased fixes / pinning a branch)
+
+You can also depend on it straight from the repository — useful for pinning an
+unreleased commit or tracking a branch before it's published to PyPI:
+
+```bash
+uv add "blockhead-clikit @ git+https://github.com/mojo5000/blockhead-clikit@v0.1.0"
+```
 
 The part after the `@` at the end of the URL is a **git ref** — a tag, branch,
 or commit. Choose deliberately:
@@ -38,30 +57,18 @@ or commit. Choose deliberately:
 | `@main` (a **branch**)| Whatever `main` pointed to **when you last locked**. | You want to track the latest and re-lock often. |
 | `@<commit-sha>`       | One exact commit.                                    | Pinning to an unreleased fix. |
 
-> **Pick the newest tag, not `v0.1.0` by rote.** The examples below use
+> **Pick the newest tag, not `v0.1.0` by rote.** The example above uses
 > `v0.1.0` because it's the current release — check the
 > [tags](https://github.com/mojo5000/blockhead-clikit/tags) (or run
 > `git ls-remote --tags origin`) and use the latest, so you don't accidentally
-> pin an old version copied from these docs.
-
-```toml
-# in a consumer's pyproject.toml — pin a specific release tag
-[project]
-dependencies = [
-    "blockhead-clikit @ git+ssh://git@github.com/mojo5000/blockhead-clikit@v0.1.0",
-]
-```
-
-```bash
-# or add it directly
-uv add "blockhead-clikit @ git+ssh://git@github.com/mojo5000/blockhead-clikit@v0.1.0"
-```
+> pin an old version copied from these docs. (For released versions, prefer the
+> plain PyPI install above and pin with a normal version specifier.)
 
 **Tag vs. branch when updating.** A tag is frozen, so a change here can't
-silently break every project at once — each consumer upgrades on purpose:
+silently break a git-pinned consumer — you upgrade on purpose:
 
 ```bash
-# tracking a TAG: bump the tag in pyproject.toml (e.g. v0.1.0 → v0.2.0), then
+# tracking a TAG: bump the tag in the URL (e.g. v0.1.0 → v0.2.0), then
 uv lock --upgrade-package blockhead-clikit
 
 # tracking a BRANCH (@main): the URL doesn't change; re-lock to pull the
@@ -69,16 +76,9 @@ uv lock --upgrade-package blockhead-clikit
 uv lock --upgrade-package blockhead-clikit
 ```
 
-With `@main`, the pinning lives in your `uv.lock` (the exact commit), so builds
+With `@main`, the pin lives in your `uv.lock` (the exact commit), so builds
 stay reproducible until you re-lock — but a plain `uv sync` on a fresh checkout
 will fetch whatever the lock recorded, not necessarily today's `main`.
-
-Consumers needing the Django bridge (`cli_kit.django_cmd`) add the `django`
-extra (Django is imported lazily, so only these consumers pull it in):
-
-```bash
-uv add "blockhead-clikit[django] @ git+ssh://git@github.com/mojo5000/blockhead-clikit@v0.1.0"
-```
 
 ## Quick start
 
@@ -140,6 +140,16 @@ See [`cli_kit/README.md`](cli_kit/README.md) for the full API and design notes.
 ## Develop
 
 ```bash
-uv sync            # install runtime + dev deps
-uv run pytest      # run the suite
+uv sync --all-extras   # runtime + dev deps (pytest, ruff, coverage) + django extra
+uv run pytest          # run the suite
+uv run pytest --cov    # with coverage
+uv run ruff check .    # lint
+uv run ruff format .   # format
 ```
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full workflow and release
+process.
+
+## License
+
+[MIT](LICENSE) © Steve Motola.

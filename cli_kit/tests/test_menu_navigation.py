@@ -129,9 +129,7 @@ def test_search_opt_in_reaches_select(monkeypatch):
 
     captured = {}
 
-    def fake_select(
-        message, *, choices, default=None, search=False, qmark="?", quit_key=False
-    ):
+    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
         captured["search"] = search
         return "__quit__"
 
@@ -149,9 +147,7 @@ def test_default_choose_uses_breadcrumb_message_and_arrow_qmark(monkeypatch):
 
     captured = {}
 
-    def fake_select(
-        message, *, choices, default=None, search=False, qmark="?", quit_key=False
-    ):
+    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
         captured["message"] = message
         captured["qmark"] = qmark
         captured["quit_key"] = quit_key
@@ -171,9 +167,7 @@ def test_top_level_menu_binds_quit_key(monkeypatch):
 
     seen = []
 
-    def fake_select(
-        message, *, choices, default=None, search=False, qmark="?", quit_key=False
-    ):
+    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
         seen.append((message, quit_key))
         if message == "Main":
             # Descend into Django exactly once so we observe both a top and a
@@ -198,9 +192,7 @@ def test_search_menu_does_not_bind_quit_key(monkeypatch):
 
     captured = {}
 
-    def fake_select(
-        message, *, choices, default=None, search=False, qmark="?", quit_key=False
-    ):
+    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
         captured["quit_key"] = quit_key
         return "__quit__"
 
