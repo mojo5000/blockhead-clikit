@@ -9,7 +9,7 @@ from cli_kit.prompts._style import qstyle
 from cli_kit.theme import theme
 
 
-def _build(**kw: Any):
+def _build(**kw: Any) -> questionary.Question:
     return questionary.text(**kw)
 
 

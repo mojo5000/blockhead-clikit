@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Static type checking: `mypy` config (`disallow_untyped_defs`) + a CI step;
+  annotated the remaining untyped functions in the package.
+- Secret scanning via `gitleaks` (CI job + pre-commit hook) with a
+  `.gitleaks.toml` allowlist.
+- `.pre-commit-config.yaml` (ruff, mypy, gitleaks, generic safety hooks) and
+  `.editorconfig` for cross-editor consistency.
+- Expanded the ruff ruleset to the house standard (adds `N`, `S`, `C90`, `T20`).
+
+### Added (earlier)
 - Public-repo scaffolding: MIT `LICENSE`, CI workflow (lint + test matrix on
   Python 3.12/3.13 + build), PyPI trusted-publishing release workflow, ruff
   and coverage configuration, `CONTRIBUTING`, `SECURITY`, `CODE_OF_CONDUCT`,

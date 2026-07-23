@@ -12,6 +12,15 @@ cd blockhead-clikit
 uv sync --all-extras   # runtime + dev deps (pytest, ruff, coverage) + django extra
 ```
 
+### Pre-commit hooks (recommended)
+
+Install the git hooks once so ruff, mypy, and gitleaks run automatically on
+every commit — the same gates CI enforces:
+
+```bash
+uv run pre-commit install
+```
+
 ## Development loop
 
 ```bash
@@ -19,11 +28,12 @@ uv run pytest                 # run the suite
 uv run pytest --cov           # with coverage
 uv run ruff check .           # lint
 uv run ruff format .          # format
+uv run mypy                   # type check (config in [tool.mypy])
 ```
 
-CI runs lint, the test matrix (Python 3.12 & 3.13), and a build on every PR —
-please make sure `ruff check`, `ruff format --check`, and `pytest` all pass
-locally first.
+CI runs secret scanning (gitleaks), lint + format + type check, the test matrix
+(Python 3.12 & 3.13), and a build on every PR — please make sure `ruff check`,
+`ruff format --check`, `mypy`, and `pytest` all pass locally first.
 
 ## Guidelines
 

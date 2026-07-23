@@ -1,0 +1,40 @@
+# Run automatically on `git commit` after `pre-commit install`.
+# One-time setup: `uv run pre-commit install` (or `pipx run pre-commit install`).
+# Mirrors the CI gates so problems are caught before they reach a PR.
+repos:
+  # Generic safety checks — fast, no autofix to avoid surprise rewrites.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        exclude: \.md$  # markdown uses trailing spaces as hard breaks
+
+  # Lint + format (matches [tool.ruff] in pyproject.toml).
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.1
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Type check via the project's uv environment (uses [tool.mypy] config).
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false  # mypy uses `files`/`exclude` from pyproject
+
+  # Secret scanning on the staged diff. Allowlist false positives in .gitleaks.toml.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

@@ -5,6 +5,7 @@ the 1:1 convenience wiring both click and menu from one call.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import click
 
@@ -25,7 +26,7 @@ def cli_command(group: click.Group, action: Callable, *, name: str | None = None
         else:
             params.append(click.Option([f"--{spec.name.replace('_', '-')}"], default=spec.default))
 
-    def callback(**kwargs):
+    def callback(**kwargs: Any) -> Any:
         # Translate cli_kit's surface-agnostic InputRequired into Click's own
         # error so a missing required input on a non-tty stdin exits 2 with a
         # usage message instead of an uncaught traceback. cli_kit.prompts stays
