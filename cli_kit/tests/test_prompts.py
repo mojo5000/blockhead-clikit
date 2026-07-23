@@ -290,9 +290,7 @@ def test_build_select_always_binds_escape_to_abort():
 
 
 def test_build_select_binds_q_only_with_quit_key():
-    q_on = prompts.select_mod._build_select(
-        message="Pick", choices=["A", "B"], quit_key=True
-    )
+    q_on = prompts.select_mod._build_select(message="Pick", choices=["A", "B"], quit_key=True)
     keys_on = _binding_keys(q_on)
     assert ("q",) in keys_on and ("Q",) in keys_on
 

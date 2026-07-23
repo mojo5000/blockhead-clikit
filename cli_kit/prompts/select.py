@@ -39,9 +39,7 @@ class Separator:
 def _to_questionary(choice: str | Choice | Separator) -> Any:
     if isinstance(choice, Separator):
         return (
-            questionary.Separator()
-            if choice.line is None
-            else questionary.Separator(choice.line)
+            questionary.Separator() if choice.line is None else questionary.Separator(choice.line)
         )
     if isinstance(choice, Choice):
         return questionary.Choice(title=choice.title, value=choice.value)
@@ -106,9 +104,7 @@ def _bind_abort_keys(question: Any, *, quit_key: bool, search: bool) -> Any:
 
 
 def _build_select(*, quit_key: bool = False, search: bool = False, **kw: Any):
-    return _bind_abort_keys(
-        questionary.select(**kw), quit_key=quit_key, search=search
-    )
+    return _bind_abort_keys(questionary.select(**kw), quit_key=quit_key, search=search)
 
 
 def _build_checkbox(**kw: Any):
