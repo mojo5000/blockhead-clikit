@@ -10,7 +10,7 @@ from cli_kit.prompts._style import qstyle
 from cli_kit.theme import theme
 
 
-def _build(**kw: Any):
+def _build(**kw: Any) -> questionary.Question:
     return questionary.path(**kw)
 
 
@@ -20,4 +20,4 @@ def path(message: str, *, default: str = "", must_exist: bool = False) -> str:
         raise Aborted()
     if must_exist and not Path(answer).exists():
         raise ValueError(f"path does not exist: {answer}")
-    return answer
+    return str(answer)

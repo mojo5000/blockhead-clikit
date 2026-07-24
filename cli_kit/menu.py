@@ -83,7 +83,7 @@ class Menu:
         )
         if choice in ("← Back", "Quit"):
             return QUIT if at_top else BACK
-        return choice
+        return str(choice)
 
     def run(
         self,

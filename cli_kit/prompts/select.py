@@ -57,7 +57,9 @@ class _AbortPrompt(Exception):
     """
 
 
-def _bind_abort_keys(question: Any, *, quit_key: bool, search: bool) -> Any:
+def _bind_abort_keys(
+    question: questionary.Question, *, quit_key: bool, search: bool
+) -> questionary.Question:
     """Wire the standard "go back / quit" keys onto a select prompt.
 
     questionary 2.x only binds Ctrl-C/Ctrl-Q to cancel. We reach through the
@@ -79,7 +81,9 @@ def _bind_abort_keys(question: Any, *, quit_key: bool, search: bool) -> Any:
     """
     from prompt_toolkit.keys import Keys
 
-    bindings = question.application.key_bindings
+    # questionary always builds its Application with a concrete KeyBindings, but
+    # the type is declared Optional[KeyBindingsBase]; we reach past that here.
+    bindings: Any = question.application.key_bindings
 
     def _abort(event: Any) -> None:
         event.app.exit(exception=_AbortPrompt, style="class:aborting")
@@ -103,11 +107,13 @@ def _bind_abort_keys(question: Any, *, quit_key: bool, search: bool) -> Any:
     return question
 
 
-def _build_select(*, quit_key: bool = False, search: bool = False, **kw: Any):
+def _build_select(
+    *, quit_key: bool = False, search: bool = False, **kw: Any
+) -> questionary.Question:
     return _bind_abort_keys(questionary.select(**kw), quit_key=quit_key, search=search)
 
 
-def _build_checkbox(**kw: Any):
+def _build_checkbox(**kw: Any) -> questionary.Question:
     return questionary.checkbox(**kw)
 
 
@@ -170,4 +176,4 @@ def multiselect(
     ).ask()
     if answer is None:
         raise Aborted()
-    return answer
+    return list(answer)

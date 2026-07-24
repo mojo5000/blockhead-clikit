@@ -7,21 +7,22 @@ that actually subclasses ActionCommand (inside a Django app) pays for Django.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from cli_kit.errors import CommandFailed
 from cli_kit.signature import params_of
 
 
-def _base_command():
+def _base_command() -> type[Any]:
     from django.core.management.base import BaseCommand  # lazy import
 
-    return BaseCommand
+    return BaseCommand  # type: ignore[no-any-return]  # django ships no stubs
 
 
 class _ActionCommandMeta(type):
     """Build the class with Django's BaseCommand as a base, lazily."""
 
-    def __new__(mcs, name, bases, namespace):
+    def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]) -> type:
         if name == "ActionCommand":
             return super().__new__(mcs, name, bases, namespace)
         base = _base_command()
@@ -35,7 +36,7 @@ class _ActionCommandMeta(type):
 class ActionCommand(metaclass=_ActionCommandMeta):
     action: Callable | None = None
 
-    def add_arguments(self, parser) -> None:
+    def add_arguments(self, parser: Any) -> None:
         if self.action is None:
             return
         for spec in params_of(self.action):
@@ -56,7 +57,7 @@ class ActionCommand(metaclass=_ActionCommandMeta):
             else:
                 parser.add_argument(spec.name)
 
-    def handle(self, *args, **options) -> None:
+    def handle(self, *args: Any, **options: Any) -> None:
         from cli_kit import ui
 
         if self.action is None:
