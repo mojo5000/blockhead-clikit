@@ -129,7 +129,9 @@ def test_search_opt_in_reaches_select(monkeypatch):
 
     captured = {}
 
-    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
+    def fake_select(
+        message, *, choices, default=None, search=False, qmark="?", quit_key=False, shortcuts=None
+    ):
         captured["search"] = search
         return "__quit__"
 
@@ -147,7 +149,9 @@ def test_default_choose_uses_breadcrumb_message_and_arrow_qmark(monkeypatch):
 
     captured = {}
 
-    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
+    def fake_select(
+        message, *, choices, default=None, search=False, qmark="?", quit_key=False, shortcuts=None
+    ):
         captured["message"] = message
         captured["qmark"] = qmark
         captured["quit_key"] = quit_key
@@ -167,7 +171,9 @@ def test_top_level_menu_binds_quit_key(monkeypatch):
 
     seen = []
 
-    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
+    def fake_select(
+        message, *, choices, default=None, search=False, qmark="?", quit_key=False, shortcuts=None
+    ):
         seen.append((message, quit_key))
         if message == "Main":
             # Descend into Django exactly once so we observe both a top and a
@@ -185,6 +191,46 @@ def test_top_level_menu_binds_quit_key(monkeypatch):
     assert ("Main › Django", False) in seen  # submenu → q is not bound
 
 
+def test_default_choose_passes_item_shortcuts(monkeypatch):
+    # The menu maps each item's shortcut char to its displayed label so the key
+    # jumps straight to that item; items without a shortcut aren't in the map.
+    from cli_kit import prompts
+
+    captured = {}
+
+    def fake_select(
+        message, *, choices, default=None, search=False, qmark="?", quit_key=False, shortcuts=None
+    ):
+        captured["shortcuts"] = shortcuts
+        return "__quit__"
+
+    monkeypatch.setattr(prompts, "select", fake_select)
+    m = Menu("Main")
+    m.add("Configure", lambda: None, shortcut="c")
+    m.add("Run", lambda: None)  # no shortcut → absent from the map
+    m.run()
+    assert captured["shortcuts"] == {"c": "(C)onfigure"}
+
+
+def test_shortcut_keypress_selects_item_in_live_menu():
+    # End-to-end: pressing an item's shortcut key runs that item's action.
+    from prompt_toolkit.application.current import create_app_session
+    from prompt_toolkit.input.defaults import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    hits = []
+    m = Menu("Main")
+    m.add("Configure", lambda: hits.append("configure"), shortcut="c")
+    m.add("Run", lambda: hits.append("run"), shortcut="r")
+
+    with create_pipe_input() as inp:
+        with create_app_session(input=inp, output=DummyOutput()):
+            inp.send_text("r")  # shortcut → Run
+            inp.send_text("q")  # quit
+            m.run()
+    assert hits == ["run"]
+
+
 def test_search_menu_does_not_bind_quit_key(monkeypatch):
     # In a type-to-filter menu, `q` is a search character, so it must not be
     # hijacked as a quit shortcut even at the top level.
@@ -192,7 +238,9 @@ def test_search_menu_does_not_bind_quit_key(monkeypatch):
 
     captured = {}
 
-    def fake_select(message, *, choices, default=None, search=False, qmark="?", quit_key=False):
+    def fake_select(
+        message, *, choices, default=None, search=False, qmark="?", quit_key=False, shortcuts=None
+    ):
         captured["quit_key"] = quit_key
         return "__quit__"
 

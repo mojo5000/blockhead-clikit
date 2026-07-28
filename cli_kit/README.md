@@ -20,14 +20,15 @@ For divergent cases, wire surfaces explicitly:
 
 ## What you get
 
-- `theme` — swappable presets (`zigablocks`, `blockhead`, `mono`). `use_theme("mono")`.
+- `theme` — swappable presets (`zigablocks`, `blockhead`, `clay`, `mono`). `use_theme("clay")`.
 - `ui` — `banner`, `success`/`error`/`warn`/`info`, `kv`, `panel`, `table`, `badge`.
 - `prompts` — themed `text`/`confirm`/`select`/`multiselect`/`number`/`path` + `validators`.
   Cancelling raises `Aborted` (the menu treats it as "go back").
 - `sh.run(...)` — subprocess with echo, spinner, `dry_run`, and typed `CommandFailed`.
 - `Menu` — persistent nav loop guaranteeing: back nav, error failsafe (an action error
   returns you to the menu, never kills the app), consistent error display, abort
-  handling, shortcut keys, spinners, destructive confirms.
+  handling, shortcut hotkeys (labelled inline as `(C)onfigure`; pressing the key
+  selects the item), spinners, destructive confirms.
 - `django_cmd.ActionCommand` — subclass, set `action`, get a `manage.py` command.
 
 ## Quick start

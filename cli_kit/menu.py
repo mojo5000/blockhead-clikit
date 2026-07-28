@@ -25,6 +25,25 @@ class MenuItem:
     shortcut: str | None = None
     destructive: bool = False
 
+    def display_label(self) -> str:
+        """The label as shown in the menu, with the shortcut key marked.
+
+        When a ``shortcut`` letter appears in the label (case-insensitively),
+        that first occurrence is wrapped in parens so the accelerator is
+        visible in-line — ``"Configure"`` with ``shortcut="c"`` renders as
+        ``"(C)onfigure"``. If the letter isn't in the label, the shortcut is
+        appended as a ``(c)`` suffix so it's still discoverable. Items without
+        a shortcut render their label unchanged.
+        """
+        if not self.shortcut:
+            return self.label
+        key = self.shortcut
+        idx = self.label.lower().find(key.lower())
+        if idx == -1:
+            return f"{self.label} ({key})"
+        matched = self.label[idx]
+        return f"{self.label[:idx]}({matched}){self.label[idx + 1 :]}"
+
 
 class Menu:
     def __init__(self, title: str, *, search: bool = False) -> None:
@@ -70,9 +89,13 @@ class Menu:
         # item — but only when this menu isn't a type-to-filter menu, where `q`
         # is a search character.
         at_top = menu is self
-        labels = [i.label for i in menu._items]
+        labels = [i.display_label() for i in menu._items]
         labels += [f"▸ {name}" for name in menu._submenus]
         labels.append("Quit" if at_top else "← Back")
+        # Pressing an item's shortcut jumps straight to it: map the key to the
+        # displayed label so the return value flows through _resolve_item like
+        # any arrowed-to choice.
+        shortcuts = {item.shortcut: item.display_label() for item in menu._items if item.shortcut}
         choice = prompts.select(
             " › ".join(path),
             choices=labels,
@@ -80,6 +103,7 @@ class Menu:
             search=menu._search,
             qmark=">",
             quit_key=at_top and not menu._search,
+            shortcuts=shortcuts,
         )
         if choice in ("← Back", "Quit"):
             return QUIT if at_top else BACK
@@ -132,8 +156,11 @@ class Menu:
         return self._submenus.get(name)
 
     def _resolve_item(self, choice: str) -> MenuItem | None:
+        # `choice` is the *displayed* label (which may carry the shortcut
+        # marker, e.g. "(C)onfigure"), so match on display_label(), falling
+        # back to the raw label for choosers that bypass the marker.
         for item in self._items:
-            if item.label == choice:
+            if choice in (item.display_label(), item.label):
                 return item
         return None
 
