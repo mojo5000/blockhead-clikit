@@ -13,12 +13,19 @@ The distributable package is **`blockhead-clikit`**; the import name is
 **`cli_kit`** (kept stable so existing `from cli_kit import …` code needs no
 changes).
 
-## Requirements
+![A blockhead-clikit menu: a themed banner over a breadcrumb-titled list of
+workspace actions, one highlighted by the selection cursor.](docs/images/menu-example.png)
 
-- **Python 3.12+** — the package declares `requires-python = ">=3.12"`.
+## Prerequisites
+
+- **Python 3.12+** — the package declares `requires-python = ">=3.12"`. Check
+  with `python --version`.
 - **[uv](https://docs.astral.sh/uv/)** (recommended) — used for installing,
   locking, and running. Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh`
   (or `brew install uv`). Plain `pip` works too; the README just leads with `uv`.
+- **A real terminal** — the interactive menu and prompts drive a TTY (arrow
+  keys, shortcut keystrokes, spinners). In a non-interactive context (CI, a
+  pipe) drive the same actions as [CLI commands](#run-it-as-a-cli) instead.
 
 Runtime dependencies (`click`, `rich`, `questionary`) are pulled in
 automatically. The optional Django bridge needs Django, installed via the
@@ -90,7 +97,7 @@ import time
 
 from cli_kit import Menu, ui, use_theme
 
-use_theme("blockhead")  # or "clay", "zigablocks", "mono"
+use_theme("clay")  # or "blockhead", "zigablocks", "mono"
 
 def configure():
     with ui.status("Configuring…"):   # themed spinner
@@ -98,16 +105,12 @@ def configure():
     ui.success("Configuration complete.")
 
 menu = Menu("My App")
-menu.add("Configure", configure, shortcut="c")
+menu.add("Configure", configure, shortcut="c")   # renders as "(C)onfigure"; press c to run it
 menu.run()
 ```
 
-For a fuller, ready-to-run example with **Configure / Run / Deploy** actions,
-see [`samples/menu_app.py`](samples/menu_app.py):
-
-```bash
-uv run python samples/menu_app.py
-```
+Navigate with ↑/↓ + Enter, press an item's **shortcut key** to jump straight to
+it, **Backspace** to go back a level, and **q** to quit at the top.
 
 To shell out to another process instead of sleeping, use `sh.run`, which gives
 you the same themed spinner around a real command:
@@ -119,23 +122,66 @@ from cli_kit import sh
 sh.run(["git", "pull"], spinner="Updating…", capture=True, check=True)
 ```
 
+## Run the example
+
+[`examples/menu_app.py`](examples/menu_app.py) is a single, self-contained file
+that drives the same actions two ways — an interactive menu and a `click` CLI.
+It depends only on `cli_kit` and the standard library, so it runs anywhere the
+package is installed.
+
+### Run it as a menu
+
+```bash
+# from a checkout of this repo (deps already synced via `uv sync`)
+uv run python examples/menu_app.py
+
+# or, if you've installed blockhead-clikit into your own environment
+python examples/menu_app.py
+```
+
+You get a themed menu (on the **clay** theme) with shortcut-marked labels —
+**(G)reet**, **(C)onfigure**, **(R)un**, **(D)eploy** — and a **Settings**
+submenu you descend into and leave with Backspace / **← Back**. Omitted inputs
+are collected with questionary prompts; Ctrl-C during an action returns you to
+the menu.
+
+### Run it as a CLI
+
+Pass a subcommand and the same file behaves as a plain `click` app — no menu,
+so it works in scripts and CI:
+
+```bash
+uv run python examples/menu_app.py --help
+uv run python examples/menu_app.py greet --name Ada
+uv run python examples/menu_app.py configure --env staging
+uv run python examples/menu_app.py deploy --replicas 2
+```
+
+Omit a flag and the interactive prompt fills it in — e.g. `greet` with no
+`--name` asks for one. Same actions, same code, both surfaces — wired once with
+`expose`.
+
 ## What you get
 
-- **`theme`** — swappable presets (`blockhead`, `clay`, `zigablocks`, `mono`);
+- **`theme`** — swappable presets (`clay`, `blockhead`, `zigablocks`, `mono`);
   register your own via `register_theme()`.
-- **`ui`** — `banner`, `success`/`error`/`warn`/`info`, `kv`, `panel`, `table`, `badge`.
+- **`ui`** — `banner`, `success`/`error`/`warn`/`info`, `kv`, `panel`, `table`,
+  `badge`, `status` (spinner), and step reports.
 - **`prompts`** — themed `text`/`confirm`/`select`/`multiselect`/`number`/`path`
   + `validators`, plus a tty-aware `resolve` contract (value-supplied →
   short-circuit; missing + no tty + required → error naming the flag).
 - **`sh.run(...)`** — subprocess with echo, spinner, `dry_run`, typed `CommandFailed`.
 - **`Menu`** — persistent nav loop: back-nav, breadcrumb, remember-last,
-  error failsafe, shortcuts, destructive confirms, type-to-filter search.
+  error failsafe, **shortcut hotkeys** (labelled inline as `(C)onfigure`, and
+  pressing the key selects the item), submenus, destructive confirms, and
+  type-to-filter search.
 - **`registry.expose`** — one plain callable becomes both a click command and a
   menu item, killing menu/command drift.
 - **`django_cmd.ActionCommand`** — subclass to get a `manage.py` command
   (Django imported lazily; only needed with the `django` extra).
 
-See [`cli_kit/README.md`](cli_kit/README.md) for the full API and design notes.
+See [`cli_kit/README.md`](cli_kit/README.md) for the full API and design notes,
+and [`examples/README.md`](examples/README.md) for the example walkthrough.
 
 ## Develop
 

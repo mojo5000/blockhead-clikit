@@ -57,9 +57,36 @@ class _AbortPrompt(Exception):
     """
 
 
-def _bind_abort_keys(
-    question: questionary.Question, *, quit_key: bool, search: bool
-) -> questionary.Question:
+def _bind_shortcut_keys(
+    question: questionary.Question, shortcuts: dict[str, Any], reserved: set[str]
+) -> None:
+    """Bind single-key accelerators that jump straight to a choice.
+
+    ``shortcuts`` maps a key character to the value ``select`` should return
+    when that key is pressed — the menu passes ``{"c": "(C)onfigure", …}`` so
+    ``c`` selects that item without arrowing to it. Each bound key exits the
+    prompt_toolkit ``Application`` with its value as the result (mirroring how
+    the abort keys exit, but returning rather than raising).
+
+    ``reserved`` names keys already claimed by an abort binding (e.g. ``q`` as
+    the quit key); a shortcut on a reserved key is skipped so the two never
+    fight over the same char. ``eager=True`` so the accelerator fires before
+    any default binding consumes the key.
+    """
+    bindings: Any = question.application.key_bindings
+
+    for key, value in shortcuts.items():
+        if key in reserved:
+            continue
+
+        def _pick(event: Any, _value: Any = value) -> None:
+            event.app.exit(result=_value)
+
+        _pick._cli_kit_shortcut = True  # type: ignore[attr-defined]
+        bindings.add(key, eager=True)(_pick)
+
+
+def _bind_abort_keys(question: questionary.Question, *, quit_key: bool, search: bool) -> set[str]:
     """Wire the standard "go back / quit" keys onto a select prompt.
 
     questionary 2.x only binds Ctrl-C/Ctrl-Q to cancel. We reach through the
@@ -77,7 +104,9 @@ def _bind_abort_keys(
       ESC is kept only so muscle memory still works.
 
     Every bound key exits the prompt with :class:`_AbortPrompt`, which
-    :func:`select` converts to :class:`Aborted`.
+    :func:`select` converts to :class:`Aborted`. Returns the set of literal
+    character keys it reserved (e.g. ``{"q", "Q"}``) so shortcut binding can
+    steer clear of them.
     """
     from prompt_toolkit.keys import Keys
 
@@ -104,13 +133,25 @@ def _bind_abort_keys(
     for key in keys:
         bindings.add(key, eager=True)(_abort)
 
-    return question
+    # Only literal char keys matter for shortcut collision (Escape/Backspace are
+    # not shortcut candidates); q/Q are the ones a shortcut could clash with.
+    return {"q", "Q"} if quit_key else set()
 
 
 def _build_select(
-    *, quit_key: bool = False, search: bool = False, **kw: Any
+    *,
+    quit_key: bool = False,
+    search: bool = False,
+    shortcuts: dict[str, Any] | None = None,
+    **kw: Any,
 ) -> questionary.Question:
-    return _bind_abort_keys(questionary.select(**kw), quit_key=quit_key, search=search)
+    question = questionary.select(**kw)
+    reserved = _bind_abort_keys(question, quit_key=quit_key, search=search)
+    # Shortcut chars are filter characters in a search menu, so leave them alone
+    # there — same reason Backspace/q aren't bound as abort keys under search.
+    if shortcuts and not search:
+        _bind_shortcut_keys(question, shortcuts, reserved)
+    return question
 
 
 def _build_checkbox(**kw: Any) -> questionary.Question:
@@ -125,6 +166,7 @@ def select(
     search: bool = False,
     qmark: str | None = None,
     quit_key: bool = False,
+    shortcuts: dict[str, Any] | None = None,
 ) -> Any:
     """Prompt for one choice. Returns the selected value.
 
@@ -141,11 +183,18 @@ def select(
     by the top-level menu so ``q`` quits the app. Leave it off for search menus
     (where ``q`` is a filter character) and for value-selection prompts.
     Backspace and ESC abort regardless of ``quit_key``.
+
+    ``shortcuts`` maps a single key character to the value to return when that
+    key is pressed — a menu passes ``{"c": "(C)onfigure", …}`` so ``c`` jumps
+    straight to that choice. A shortcut on a reserved key (``q``/``Q`` under
+    ``quit_key``) is skipped, and shortcuts are ignored entirely under
+    ``search`` (where the char is filter text).
     """
     try:
         answer = _build_select(
             quit_key=quit_key,
             search=search,
+            shortcuts=shortcuts,
             message=message,
             choices=[_to_questionary(c) for c in choices],
             default=default,

@@ -341,3 +341,63 @@ def test_abort_prompt_converts_to_aborted(monkeypatch):
     monkeypatch.setattr(prompts.select_mod, "_build_select", lambda **kw: _Boom())
     with pytest.raises(Aborted):
         prompts.select("Pick", choices=["A", "B"])
+
+
+def _shortcut_bound_keys(question):
+    """Keys wired to *our* shortcut handler (ignoring every other binding)."""
+    return [
+        b.keys
+        for b in question.application.key_bindings.bindings
+        if getattr(b.handler, "_cli_kit_shortcut", False)
+    ]
+
+
+def test_build_select_binds_shortcut_keys():
+    q = prompts.select_mod._build_select(
+        message="Pick",
+        choices=["(A)lpha", "(C)harlie"],
+        shortcuts={"a": "(A)lpha", "c": "(C)harlie"},
+    )
+    keys = _shortcut_bound_keys(q)
+    assert ("a",) in keys and ("c",) in keys
+
+
+def test_build_select_skips_shortcut_on_reserved_quit_key():
+    # A shortcut on q/Q must not be bound when quit_key owns those chars, so the
+    # quit gesture keeps working rather than being hijacked into a selection.
+    q = prompts.select_mod._build_select(
+        message="Pick", choices=["(Q)uux"], shortcuts={"q": "(Q)uux"}, quit_key=True
+    )
+    assert ("q",) not in _shortcut_bound_keys(q)
+
+
+def test_build_select_ignores_shortcuts_in_search_menu():
+    # Shortcut chars are filter text in a search menu, so no shortcut binding.
+    q = prompts.select_mod._build_select(
+        message="Pick",
+        choices=["Alpha", "Charlie"],
+        shortcuts={"c": "Charlie"},
+        search=True,
+        use_search_filter=True,
+        use_jk_keys=False,
+    )
+    assert _shortcut_bound_keys(q) == []
+
+
+def test_shortcut_keypress_returns_mapped_value():
+    # Pressing a shortcut exits the prompt returning its mapped value — the
+    # real behavior the binding exists for, driven through a live prompt.
+    from prompt_toolkit.application.current import create_app_session
+    from prompt_toolkit.input.defaults import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    with create_pipe_input() as inp:
+        with create_app_session(input=inp, output=DummyOutput()):
+            inp.send_text("c")
+            result = prompts.select(
+                "Pick",
+                choices=["(A)lpha", "(C)harlie", "Quit"],
+                shortcuts={"a": "(A)lpha", "c": "(C)harlie"},
+                quit_key=True,
+            )
+    assert result == "(C)harlie"
