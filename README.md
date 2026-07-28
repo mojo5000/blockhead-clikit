@@ -139,6 +139,9 @@ uv run python examples/menu_app.py
 python examples/menu_app.py
 ```
 
+> `uv run` runs a `.py` path as a script, so the `python` is optional —
+> `uv run examples/menu_app.py` works the same.
+
 You get a themed menu (on the **clay** theme) with shortcut-marked labels —
 **(G)reet**, **(C)onfigure**, **(R)un**, **(D)eploy** — and a **Settings**
 submenu you descend into and leave with Backspace / **← Back**. Omitted inputs
@@ -198,4 +201,4 @@ process.
 
 ## License
 
-[MIT](LICENSE) © Steve Motola.
+[MIT](LICENSE) © Entwise.

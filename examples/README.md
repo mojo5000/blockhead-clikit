@@ -32,6 +32,9 @@ uv run python examples/menu_app.py
 python examples/menu_app.py
 ```
 
+> `uv run` runs a `.py` path as a script, so you can drop `python` —
+> `uv run examples/menu_app.py` works the same.
+
 Use ↑/↓ + Enter to pick an item, or press its **shortcut key** (e.g. `c` for
 Configure) to jump straight to it. **Backspace** goes back a level (and out of
 the **Settings** submenu); **q** quits at the top. Ctrl-C during an action
