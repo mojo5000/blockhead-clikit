@@ -58,7 +58,7 @@ packages = ["cli_kit"]
 dev = [
     "pytest>=9.1.1,<10",
     "pytest-cov>=7.1.0,<8",
-    "ruff>=0.16.0,<1",
+    "ruff>=0.16.1,<1",
     "mypy>=1.7,<2",
     "pre-commit>=3,<5",
 ]
