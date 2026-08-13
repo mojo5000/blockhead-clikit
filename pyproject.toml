@@ -38,7 +38,7 @@ Changelog = "https://github.com/mojo5000/blockhead-clikit/blob/main/CHANGELOG.md
 # Django management-command bridge (cli_kit.django_cmd). Django is imported
 # lazily, so it is only needed by consumers that use ActionCommand.
 django = [
-    "django>=6.0.7,<7",
+    "django>=6.1,<7",
 ]
 
 [build-system]
